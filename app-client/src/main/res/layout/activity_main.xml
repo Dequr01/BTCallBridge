@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="BTCallBridge Client (Sony Xperia 5 IV)"
+        android:text="BTCallBridge Client"
         android:textSize="18sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp"/>
@@ -16,7 +16,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Select Paired Redmi Device:"
+        android:text="Select Host App:"
         android:layout_marginBottom="8dp"/>
 
     <ListView

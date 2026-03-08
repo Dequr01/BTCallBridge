@@ -21,9 +21,13 @@ class BTClient(
 
     @SuppressLint("MissingPermission")
     fun connect() {
+        val btAdapter = adapter ?: run {
+            onFailed()
+            return
+        }
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val device = adapter.getRemoteDevice(targetDeviceAddress)
+                val device = btAdapter.getRemoteDevice(targetDeviceAddress)
 
                 // Connect signal channel
                 val signalSocket = device.createRfcommSocketToServiceRecord(BTConstants.SIGNAL_UUID)

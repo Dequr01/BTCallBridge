@@ -7,12 +7,14 @@ import android.app.Service
 import android.bluetooth.BluetoothSocket
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.telecom.TelecomManager
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.btcallbridge.core.Protocol
 import kotlinx.coroutines.*
 import java.io.BufferedReader
@@ -35,7 +37,16 @@ class HostService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(1, createNotification("Starting server..."))
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(1, createNotification("Starting server..."), 
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(1, createNotification("Starting server..."), 
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        } else {
+            startForeground(1, createNotification("Starting server..."))
+        }
         
         btServer = BTServer { signal, audio ->
             onClientConnected(signal, audio)
@@ -47,7 +58,7 @@ class HostService : Service() {
             onEnded = { notifyCallEnded() }
         )
         val filter = IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
-        registerReceiver(callListener, filter)
+        ContextCompat.registerReceiver(this, callListener, filter, ContextCompat.RECEIVER_EXPORTED)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -61,9 +72,9 @@ class HostService : Service() {
         signalIn  = BufferedReader(InputStreamReader(signal.inputStream))
         audioStreamer = AudioStreamer(audio)
 
-        updateNotification("Xperia connected")
+        updateNotification("Client connected")
 
-        // Start listening for commands from Xperia
+        // Start listening for commands from Client
         scope.launch {
             listenForCommands()
         }
@@ -162,7 +173,7 @@ class HostService : Service() {
         audioSocket?.close()
         signalOut = null
         signalIn = null
-        updateNotification("Listening for calls — Xperia disconnected")
+        updateNotification("Listening — Client disconnected")
         btServer?.startListening()
     }
 

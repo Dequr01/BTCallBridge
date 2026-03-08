@@ -4,6 +4,7 @@ import android.app.*
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -34,7 +35,13 @@ class ClientService : Service() {
         super.onCreate()
         instance = this
         createNotificationChannel()
-        startForeground(1, createNotification("Connecting to Redmi..."))
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(1, createNotification("Connecting to Host..."), 
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        } else {
+            startForeground(1, createNotification("Connecting to Host..."))
+        }
 
         val prefs = getSharedPreferences("bt_prefs", Context.MODE_PRIVATE)
         val hostMac = prefs.getString("host_mac", null)
@@ -73,7 +80,7 @@ class ClientService : Service() {
         signalIn  = BufferedReader(InputStreamReader(signal.inputStream))
         audioReceiver = AudioReceiver(audio)
 
-        updateNotification("Connected to Redmi")
+        updateNotification("Connected to Host")
 
         scope.launch {
             listenForSignals()

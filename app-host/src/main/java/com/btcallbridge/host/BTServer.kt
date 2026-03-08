@@ -21,14 +21,15 @@ class BTServer(private val onClientConnected: (signal: BluetoothSocket, audio: B
 
     fun startListening() {
         if (isListening) return
+        val btAdapter = adapter ?: return
         isListening = true
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 // Open two RFCOMM server sockets — one for signals, one for audio
-                signalServerSocket = adapter.listenUsingRfcommWithServiceRecord(
+                signalServerSocket = btAdapter.listenUsingRfcommWithServiceRecord(
                     "BTCallBridge-Signal", BTConstants.SIGNAL_UUID)
 
-                audioServerSocket = adapter.listenUsingRfcommWithServiceRecord(
+                audioServerSocket = btAdapter.listenUsingRfcommWithServiceRecord(
                     "BTCallBridge-Audio", BTConstants.AUDIO_UUID)
 
                 Log.d("BTServer", "Listening for connections...")

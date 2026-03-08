@@ -15,7 +15,7 @@ import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
 
-    private val permissions = arrayOf(
+    private val permissions = mutableListOf(
         Manifest.permission.BLUETOOTH_CONNECT,
         Manifest.permission.BLUETOOTH_SCAN,
         Manifest.permission.BLUETOOTH_ADMIN,
@@ -23,13 +23,13 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.READ_PHONE_STATE,
         Manifest.permission.READ_CALL_LOG,
         Manifest.permission.ANSWER_PHONE_CALLS,
-        Manifest.permission.FOREGROUND_SERVICE,
+        Manifest.permission.FOREGROUND_SERVICE
+    ).apply {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            Manifest.permission.FOREGROUND_SERVICE_MICROPHONE
-        } else {
-            Manifest.permission.FOREGROUND_SERVICE
+            add(Manifest.permission.FOREGROUND_SERVICE_MICROPHONE)
+            add(Manifest.permission.FOREGROUND_SERVICE_PHONE_CALL)
         }
-    )
+    }.toTypedArray()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

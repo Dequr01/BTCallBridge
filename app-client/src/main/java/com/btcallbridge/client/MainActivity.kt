@@ -16,23 +16,31 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.btcallbridge.core.BTConstants
 
 class MainActivity : AppCompatActivity() {
 
-    private val permissions = arrayOf(
+    private val permissions = mutableListOf(
         Manifest.permission.BLUETOOTH_CONNECT,
         Manifest.permission.RECORD_AUDIO,
-        Manifest.permission.FOREGROUND_SERVICE,
+        Manifest.permission.FOREGROUND_SERVICE
+    ).apply {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            Manifest.permission.FOREGROUND_SERVICE_MICROPHONE
-        } else {
-            Manifest.permission.FOREGROUND_SERVICE
+            add(Manifest.permission.FOREGROUND_SERVICE_MICROPHONE)
         }
-    )
+    }.toTypedArray()
 
     private lateinit var deviceListView: ListView
     private lateinit var adapter: ArrayAdapter<String>
     private val deviceList = mutableListOf<BluetoothDevice>()
+
+    private val uuidReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (BluetoothDevice.ACTION_UUID == intent.action) {
+                loadPairedDevices()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,11 +59,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         deviceListView.setOnItemClickListener { _, _, position, _ ->
-            val device = deviceList[position]
-            saveHostMac(device.address)
-            startBridgeService(device.address)
-            requestBatteryOptimizationExemption()
-            Toast.makeText(this, "Connecting to ${device.name}", Toast.LENGTH_SHORT).show()
+            if (position < deviceList.size) {
+                val device = deviceList[position]
+                saveHostMac(device.address)
+                startBridgeService(device.address)
+                requestBatteryOptimizationExemption()
+                Toast.makeText(this, "Connecting to Host", Toast.LENGTH_SHORT).show()
+            }
         }
 
         if (checkPermissions()) {
@@ -63,6 +73,17 @@ class MainActivity : AppCompatActivity() {
         } else {
             requestPermissions()
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = android.content.IntentFilter(BluetoothDevice.ACTION_UUID)
+        ContextCompat.registerReceiver(this, uuidReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        unregisterReceiver(uuidReceiver)
     }
 
     private fun checkPermissions(): Boolean {
@@ -91,17 +112,32 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        val pairedDevices = btAdapter.bondedDevices
+        
         deviceList.clear()
         adapter.clear()
         
-        val pairedDevices = btAdapter.bondedDevices
         if (pairedDevices.isNotEmpty()) {
+            var foundAny = false
             for (device in pairedDevices) {
-                deviceList.add(device)
-                adapter.add("${device.name}\n${device.address}")
+                val uuids = device.uuids
+                if (uuids == null) {
+                    device.fetchUuidsWithSdp()
+                }
+                
+                val isHost = uuids?.any { it.uuid == BTConstants.SIGNAL_UUID } ?: false
+                
+                if (isHost) {
+                    deviceList.add(device)
+                    adapter.add("BTCallBridge Host (${device.name})\n${device.address}")
+                    foundAny = true
+                }
+            }
+            if (!foundAny) {
+                adapter.add("Searching for Host Apps among paired devices...")
             }
         } else {
-            adapter.add("No paired devices found")
+            adapter.add("No paired devices found. Pair with the Host device first.")
         }
         adapter.notifyDataSetChanged()
     }
