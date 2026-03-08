@@ -98,8 +98,7 @@ class MainActivity : AppCompatActivity() {
         if (pairedDevices.isNotEmpty()) {
             for (device in pairedDevices) {
                 deviceList.add(device)
-                adapter.add("${device.name}
-${device.address}")
+                adapter.add("${device.name}\n${device.address}")
             }
         } else {
             adapter.add("No paired devices found")
