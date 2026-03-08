@@ -14,14 +14,12 @@ object Protocol {
     const val HEARTBEAT      = "PING"       // PING  (sent every 5s to keep connection alive)
     const val HEARTBEAT_ACK  = "PONG"       // PONG
 
-    const val DELIMITER = "
-"
+    const val DELIMITER = "\n"
 
     fun parse(raw: String): Pair<String, List<String>> {
         val parts = raw.trim().split("|")
         return parts[0] to parts.drop(1)
     }
 
-    fun incoming(number: String, name: String) = "INCOMING|$number|$name
-"
+    fun incoming(number: String, name: String) = "INCOMING|$number|$name\n"
 }
