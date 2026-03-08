@@ -14,6 +14,7 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.io.PrintWriter
+import kotlin.coroutines.coroutineContext
 
 class ClientService : Service() {
 
@@ -81,7 +82,7 @@ class ClientService : Service() {
 
     private suspend fun listenForSignals() {
         try {
-            while (isActive) {
+            while (coroutineContext.isActive) {
                 val line = signalIn?.readLine() ?: break
                 val (cmd, params) = Protocol.parse(line)
                 Log.d("ClientService", "Received: $cmd")
@@ -162,7 +163,7 @@ class ClientService : Service() {
             delay(3000)
             val prefs = getSharedPreferences("bt_prefs", Context.MODE_PRIVATE)
             val hostMac = prefs.getString("host_mac", null)
-            if (hostMac != null && isActive) {
+            if (hostMac != null && scope.isActive) {
                 connectToHost(hostMac)
             }
         }

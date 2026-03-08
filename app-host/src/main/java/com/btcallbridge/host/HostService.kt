@@ -19,6 +19,7 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.io.PrintWriter
+import kotlin.coroutines.coroutineContext
 
 class HostService : Service() {
 
@@ -69,7 +70,7 @@ class HostService : Service() {
 
         // Start heartbeat
         scope.launch {
-            while (isActive) {
+            while (scope.isActive) {
                 delay(5000)
                 try {
                     signalOut?.print(Protocol.HEARTBEAT + Protocol.DELIMITER)
@@ -90,7 +91,7 @@ class HostService : Service() {
 
     private suspend fun listenForCommands() {
         try {
-            while (isActive) {
+            while (coroutineContext.isActive) {
                 val line = signalIn?.readLine() ?: break
                 val (cmd, _) = Protocol.parse(line)
                 Log.d("HostService", "Received: $cmd")
