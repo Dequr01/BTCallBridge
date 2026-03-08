@@ -27,13 +27,20 @@ class MainActivity : AppCompatActivity() {
     ).apply {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             add(Manifest.permission.FOREGROUND_SERVICE_MICROPHONE)
-            add(Manifest.permission.FOREGROUND_SERVICE_PHONE_CALL)
+            add(Manifest.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE)
         }
     }.toTypedArray()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // Basic crash reporting without ADB
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            android.os.Looper.prepare()
+            android.widget.Toast.makeText(this, "Crash in ${thread.name}: ${throwable.message}", android.widget.Toast.LENGTH_LONG).show()
+            android.os.Looper.loop()
+        }
 
         findViewById<Button>(R.id.btnStartService).setOnClickListener {
             if (checkPermissions()) {

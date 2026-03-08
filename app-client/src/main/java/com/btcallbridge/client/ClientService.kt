@@ -36,7 +36,10 @@ class ClientService : Service() {
         instance = this
         createNotificationChannel()
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(1, createNotification("Connecting to Host..."), 
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(1, createNotification("Connecting to Host..."), 
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
         } else {

@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity() {
     ).apply {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             add(Manifest.permission.FOREGROUND_SERVICE_MICROPHONE)
+            add(Manifest.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE)
         }
     }.toTypedArray()
 
@@ -45,6 +46,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // Basic crash reporting without ADB
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            android.os.Looper.prepare()
+            android.widget.Toast.makeText(this, "Crash in ${thread.name}: ${throwable.message}", android.widget.Toast.LENGTH_LONG).show()
+            android.os.Looper.loop()
+        }
 
         deviceListView = findViewById(R.id.deviceList)
         adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, mutableListOf<String>())
