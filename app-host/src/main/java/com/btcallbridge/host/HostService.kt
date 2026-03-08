@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.BluetoothSocket
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ServiceInfo
@@ -14,7 +15,6 @@ import android.telecom.TelecomManager
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import com.btcallbridge.core.Protocol
 import kotlinx.coroutines.*
 import java.io.BufferedReader
@@ -36,32 +36,45 @@ class HostService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(1, createNotification("Starting server..."), 
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(1, createNotification("Starting server..."), 
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
-        } else {
-            startForeground(1, createNotification("Starting server..."))
+        try {
+            createNotificationChannel()
+            
+            val notification = createNotification("Starting server...")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(1, notification, 
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(1, notification, 
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+            } else {
+                startForeground(1, notification)
+            }
+        } catch (e: Exception) {
+            Log.e("HostService", "Error in onCreate", e)
         }
-        
-        btServer = BTServer { signal, audio ->
-            onClientConnected(signal, audio)
-        }
-        btServer?.startListening()
-
-        callListener = CallListener(
-            onIncoming = { number -> notifyIncomingCall(number) },
-            onEnded = { notifyCallEnded() }
-        )
-        val filter = IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
-        ContextCompat.registerReceiver(this, callListener, filter, ContextCompat.RECEIVER_EXPORTED)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (btServer == null) {
+            btServer = BTServer { signal, audio ->
+                onClientConnected(signal, audio)
+            }
+            btServer?.startListening()
+        }
+
+        if (callListener == null) {
+            callListener = CallListener(
+                onIncoming = { number -> notifyIncomingCall(number) },
+                onEnded = { notifyCallEnded() }
+            )
+            val filter = IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(callListener, filter, RECEIVER_NOT_EXPORTED)
+            } else {
+                registerReceiver(callListener, filter)
+            }
+        }
+
         return START_STICKY
     }
 
@@ -183,7 +196,7 @@ class HostService : Service() {
                 "btcallbridge", "BTCallBridge Host",
                 NotificationManager.IMPORTANCE_DEFAULT
             )
-            val manager = getSystemService(NotificationManager::class.java)
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(serviceChannel)
         }
     }
@@ -192,7 +205,7 @@ class HostService : Service() {
         return NotificationCompat.Builder(this, "btcallbridge")
             .setContentTitle("BTCallBridge Active")
             .setContentText(content)
-            .setSmallIcon(android.R.drawable.stat_sys_phone_call)
+            .setSmallIcon(android.R.drawable.ic_menu_call)
             .setOngoing(true)
             .build()
     }
@@ -207,7 +220,9 @@ class HostService : Service() {
         scope.cancel()
         btServer?.stop()
         audioStreamer?.stop()
-        unregisterReceiver(callListener)
+        if (callListener != null) {
+            unregisterReceiver(callListener)
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

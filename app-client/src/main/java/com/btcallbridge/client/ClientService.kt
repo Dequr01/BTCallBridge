@@ -34,31 +34,29 @@ class ClientService : Service() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        createNotificationChannel()
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(1, createNotification("Connecting to Host..."), 
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(1, createNotification("Connecting to Host..."), 
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
-        } else {
-            startForeground(1, createNotification("Connecting to Host..."))
-        }
-
-        val prefs = getSharedPreferences("bt_prefs", Context.MODE_PRIVATE)
-        val hostMac = prefs.getString("host_mac", null)
-
-        if (hostMac != null) {
-            connectToHost(hostMac)
-        } else {
-            updateNotification("No host MAC saved")
+        try {
+            createNotificationChannel()
+            
+            val notification = createNotification("Connecting to Host...")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(1, notification, 
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(1, notification, 
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+            } else {
+                startForeground(1, notification)
+            }
+        } catch (e: Exception) {
+            Log.e("ClientService", "Error in onCreate", e)
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val mac = intent?.getStringExtra("host_mac")
-        if (mac != null) {
+        val mac = intent?.getStringExtra("host_mac") ?: 
+                  getSharedPreferences("bt_prefs", Context.MODE_PRIVATE).getString("host_mac", null)
+        
+        if (mac != null && btClient == null) {
             connectToHost(mac)
         }
         return START_STICKY
@@ -70,6 +68,7 @@ class ClientService : Service() {
                 onConnected(signal, audio)
             },
             onFailed = {
+                btClient = null
                 handleDisconnect()
             }
         )
@@ -137,7 +136,7 @@ class ClientService : Service() {
         val notification = NotificationCompat.Builder(this, "calls")
             .setContentTitle("Incoming Call")
             .setContentText(name)
-            .setSmallIcon(android.R.drawable.stat_sys_phone_call)
+            .setSmallIcon(android.R.drawable.ic_menu_call)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setFullScreenIntent(fullScreenPendingIntent, true)
@@ -201,7 +200,7 @@ class ClientService : Service() {
         return NotificationCompat.Builder(this, "btcallbridge")
             .setContentTitle("BTCallBridge Active")
             .setContentText(content)
-            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)
             .build()
     }

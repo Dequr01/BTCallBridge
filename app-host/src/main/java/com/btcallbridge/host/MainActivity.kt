@@ -44,8 +44,13 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnStartService).setOnClickListener {
             if (checkPermissions()) {
-                startBridgeService()
-                requestBatteryOptimizationExemption()
+                try {
+                    startBridgeService()
+                    requestBatteryOptimizationExemption()
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(this, "Startup Error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                    android.util.Log.e("BTBridge", "Startup failed", e)
+                }
             } else {
                 requestPermissions()
             }
@@ -55,6 +60,7 @@ class MainActivity : AppCompatActivity() {
     private fun checkPermissions(): Boolean {
         for (permission in permissions) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                android.util.Log.w("BTBridge", "Missing permission: $permission")
                 return false
             }
         }
